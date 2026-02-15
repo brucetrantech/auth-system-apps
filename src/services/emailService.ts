@@ -5,124 +5,124 @@ import { logger } from '@/utils/logger';
 import { EmailOptions } from '@/types';
 
 class EmailService {
-  private transporter?: Transporter;
-  private sesClient?: SESClient;
+	private transporter?: Transporter;
+	private sesClient?: SESClient;
 
-  constructor() {
-    if (config.email.provider === 'smtp') {
-      this.initSMTP();
-    } else {
-      this.initSES();
-    }
-  }
+	constructor() {
+		if (config.email.provider === 'smtp') {
+			this.initSMTP();
+		} else {
+			this.initSES();
+		}
+	}
 
-  /**
-   * Initialize SMTP transporter
-   */
-  private initSMTP(): void {
-    this.transporter = nodemailer.createTransport({
-      host: config.email.smtp.host,
-      port: config.email.smtp.port,
-      secure: config.email.smtp.secure,
-      auth: {
-        user: config.email.smtp.user,
-        pass: config.email.smtp.password,
-      },
-    });
+	/**
+	 * Initialize SMTP transporter
+	 */
+	private initSMTP(): void {
+		this.transporter = nodemailer.createTransport({
+			host: config.email.smtp.host,
+			port: config.email.smtp.port,
+			secure: config.email.smtp.secure,
+			auth: {
+				user: config.email.smtp.user,
+				pass: config.email.smtp.password,
+			},
+		});
 
-    logger.info('Email service initialized with SMTP');
-  }
+		logger.info('Email service initialized with SMTP');
+	}
 
-  /**
-   * Initialize AWS SES client
-   */
-  private initSES(): void {
-    this.sesClient = new SESClient({
-      region: config.email.aws.region,
-      credentials: {
-        accessKeyId: config.email.aws.accessKeyId,
-        secretAccessKey: config.email.aws.secretAccessKey,
-      },
-    });
+	/**
+	 * Initialize AWS SES client
+	 */
+	private initSES(): void {
+		this.sesClient = new SESClient({
+			region: config.email.aws.region,
+			credentials: {
+				accessKeyId: config.email.aws.accessKeyId,
+				secretAccessKey: config.email.aws.secretAccessKey,
+			},
+		});
 
-    logger.info('Email service initialized with AWS SES');
-  }
+		logger.info('Email service initialized with AWS SES');
+	}
 
-  /**
-   * Send email using SMTP
-   */
-  private async sendViaSMTP(options: EmailOptions): Promise<void> {
-    if (!this.transporter) {
-      throw new Error('SMTP transporter not initialized');
-    }
+	/**
+	 * Send email using SMTP
+	 */
+	private async sendViaSMTP(options: EmailOptions): Promise<void> {
+		if (!this.transporter) {
+			throw new Error('SMTP transporter not initialized');
+		}
 
-    await this.transporter.sendMail({
-      from: config.email.from,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-      text: options.text,
-    });
-  }
+		await this.transporter.sendMail({
+			from: config.email.from,
+			to: options.to,
+			subject: options.subject,
+			html: options.html,
+			text: options.text,
+		});
+	}
 
-  /**
-   * Send email using AWS SES
-   */
-  private async sendViaSES(options: EmailOptions): Promise<void> {
-    if (!this.sesClient) {
-      throw new Error('SES client not initialized');
-    }
+	/**
+	 * Send email using AWS SES
+	 */
+	private async sendViaSES(options: EmailOptions): Promise<void> {
+		if (!this.sesClient) {
+			throw new Error('SES client not initialized');
+		}
 
-    const command = new SendEmailCommand({
-      Source: config.email.from,
-      Destination: {
-        ToAddresses: [options.to],
-      },
-      Message: {
-        Subject: {
-          Data: options.subject,
-        },
-        Body: {
-          Html: {
-            Data: options.html,
-          },
-          ...(options.text && {
-            Text: {
-              Data: options.text,
-            },
-          }),
-        },
-      },
-    });
+		const command = new SendEmailCommand({
+			Source: config.email.from,
+			Destination: {
+				ToAddresses: [options.to],
+			},
+			Message: {
+				Subject: {
+					Data: options.subject,
+				},
+				Body: {
+					Html: {
+						Data: options.html,
+					},
+					...(options.text && {
+						Text: {
+							Data: options.text,
+						},
+					}),
+				},
+			},
+		});
 
-    await this.sesClient.send(command);
-  }
+		await this.sesClient.send(command);
+	}
 
-  /**
-   * Send email
-   */
-  async sendEmail(options: EmailOptions): Promise<void> {
-    try {
-      if (config.email.provider === 'smtp') {
-        await this.sendViaSMTP(options);
-      } else {
-        await this.sendViaSES(options);
-      }
+	/**
+	 * Send email
+	 */
+	async sendEmail(options: EmailOptions): Promise<void> {
+		try {
+			if (config.email.provider === 'smtp') {
+				await this.sendViaSMTP(options);
+			} else {
+				await this.sendViaSES(options);
+			}
 
-      logger.info(`Email sent to ${options.to}: ${options.subject}`);
-    } catch (error) {
-      logger.error('Failed to send email:', error);
-      throw new Error('Failed to send email');
-    }
-  }
+			logger.info(`Email sent to ${options.to}: ${options.subject}`);
+		} catch (error) {
+			logger.error('Failed to send email:', error);
+			throw new Error('Failed to send email');
+		}
+	}
 
-  /**
-   * Send verification email
-   */
-  async sendVerificationEmail(email: string, token: string): Promise<void> {
-    const verificationUrl = `${config.urls.backend}/auth/verify-email?token=${token}`;
+	/**
+	 * Send verification email
+	 */
+	async sendVerificationEmail(email: string, token: string): Promise<void> {
+		const verificationUrl = `${config.urls.frontend}/verify-email?token=${token}`;
 
-    const html = `
+		const html = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -159,21 +159,21 @@ class EmailService {
       </html>
     `;
 
-    await this.sendEmail({
-      to: email,
-      subject: 'Verify Your Email Address',
-      html,
-      text: `Please verify your email by visiting: ${verificationUrl}`,
-    });
-  }
+		await this.sendEmail({
+			to: email,
+			subject: 'Verify Your Email Address',
+			html,
+			text: `Please verify your email by visiting: ${verificationUrl}`,
+		});
+	}
 
-  /**
-   * Send password reset email
-   */
-  async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    const resetUrl = `${config.urls.frontend}/reset-password?token=${token}`;
+	/**
+	 * Send password reset email
+	 */
+	async sendPasswordResetEmail(email: string, token: string): Promise<void> {
+		const resetUrl = `${config.urls.frontend}/reset-password?token=${token}`;
 
-    const html = `
+		const html = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -212,19 +212,19 @@ class EmailService {
       </html>
     `;
 
-    await this.sendEmail({
-      to: email,
-      subject: 'Reset Your Password',
-      html,
-      text: `Reset your password by visiting: ${resetUrl}`,
-    });
-  }
+		await this.sendEmail({
+			to: email,
+			subject: 'Reset Your Password',
+			html,
+			text: `Reset your password by visiting: ${resetUrl}`,
+		});
+	}
 
-  /**
-   * Send welcome email
-   */
-  async sendWelcomeEmail(email: string, displayName?: string): Promise<void> {
-    const html = `
+	/**
+	 * Send welcome email
+	 */
+	async sendWelcomeEmail(email: string, displayName?: string): Promise<void> {
+		const html = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -255,13 +255,13 @@ class EmailService {
       </html>
     `;
 
-    await this.sendEmail({
-      to: email,
-      subject: 'Welcome to Auth System!',
-      html,
-      text: `Welcome ${displayName || 'there'}! Your email has been verified successfully.`,
-    });
-  }
+		await this.sendEmail({
+			to: email,
+			subject: 'Welcome to Auth System!',
+			html,
+			text: `Welcome ${displayName || 'there'}! Your email has been verified successfully.`,
+		});
+	}
 }
 
 export const emailService = new EmailService();

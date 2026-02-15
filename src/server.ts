@@ -27,12 +27,12 @@ app.use(helmet());
 
 // CORS configuration
 app.use(
-  cors({
-    origin: config.security.corsOrigin,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
+	cors({
+		origin: config.security.corsOrigin,
+		credentials: true,
+		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
+	}),
 );
 
 // Body parsers
@@ -42,9 +42,9 @@ app.use(cookieParser());
 
 // HTTP request logger
 if (config.env === 'development') {
-  app.use(morgan('dev'));
+	app.use(morgan('dev'));
 } else {
-  app.use(morgan('combined', { stream: morganStream }));
+	app.use(morgan('combined', { stream: morganStream }));
 }
 
 // Initialize Passport
@@ -57,15 +57,15 @@ app.use(generalLimiter);
  * Health Check Route
  */
 app.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      environment: config.env,
-      version: '1.0.0',
-    },
-  });
+	res.json({
+		success: true,
+		data: {
+			status: 'healthy',
+			timestamp: new Date().toISOString(),
+			environment: config.env,
+			version: '1.0.0',
+		},
+	});
 });
 
 /**
@@ -83,16 +83,16 @@ app.use(errorHandler);
  * Start Server
  */
 const startServer = async (): Promise<void> => {
-  try {
-    // Test database connection
-    const dbConnected = await testConnection();
-    if (!dbConnected) {
-      throw new Error('Failed to connect to database');
-    }
+	try {
+		// Test database connection
+		const dbConnected = await testConnection();
+		if (!dbConnected) {
+			throw new Error('Failed to connect to database');
+		}
 
-    // Start listening
-    const server = app.listen(config.port, () => {
-      logger.info(`
+		// Start listening
+		const server = app.listen(config.port, () => {
+			logger.info(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
 ║   🚀 Auth System Server Started Successfully              ║
@@ -108,47 +108,47 @@ const startServer = async (): Promise<void> => {
 ╚═══════════════════════════════════════════════════════════╝
       `);
 
-      logger.info('Features enabled:');
-      logger.info(`  - Email Auth:      ${config.features.emailAuth}`);
-      logger.info(`  - Google OAuth:    ${config.features.oauthGoogle}`);
-      logger.info(`  - Facebook OAuth:  ${config.features.oauthFacebook}`);
-      logger.info(`  - Apple OAuth:     ${config.features.oauthApple}`);
+			logger.info('Features enabled:');
+			logger.info(`  - Email Auth:      ${config.features.emailAuth}`);
+			logger.info(`  - Google OAuth:    ${config.features.oauthGoogle}`);
+			logger.info(`  - Facebook OAuth:  ${config.features.oauthFacebook}`);
+			logger.info(`  - Apple OAuth:     ${config.features.oauthApple}`);
 
-      // Print all registered routes
-      printRoutes(app);
-    });
+			// Print all registered routes
+			printRoutes(app);
+		});
 
-    // Graceful shutdown
-    const gracefulShutdown = async (signal: string) => {
-      logger.info(`\n${signal} received. Starting graceful shutdown...`);
+		// Graceful shutdown
+		const gracefulShutdown = async (signal: string) => {
+			logger.info(`\n${signal} received. Starting graceful shutdown...`);
 
-      server.close(async () => {
-        logger.info('HTTP server closed');
+			server.close(async () => {
+				logger.info('HTTP server closed');
 
-        try {
-          const { closeConnection } = await import('@/db');
-          await closeConnection();
-          logger.info('Database connection closed');
-          process.exit(0);
-        } catch (error) {
-          logger.error('Error during shutdown:', error);
-          process.exit(1);
-        }
-      });
+				try {
+					const { closeConnection } = await import('@/db');
+					await closeConnection();
+					logger.info('Database connection closed');
+					process.exit(0);
+				} catch (error) {
+					logger.error('Error during shutdown:', error);
+					process.exit(1);
+				}
+			});
 
-      // Force shutdown after 10 seconds
-      setTimeout(() => {
-        logger.error('Forced shutdown after timeout');
-        process.exit(1);
-      }, 10000);
-    };
+			// Force shutdown after 10 seconds
+			setTimeout(() => {
+				logger.error('Forced shutdown after timeout');
+				process.exit(1);
+			}, 10000);
+		};
 
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-  } catch (error) {
-    logger.error('Failed to start server:', error);
-    process.exit(1);
-  }
+		process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+		process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+	} catch (error) {
+		logger.error('Failed to start server:', error);
+		process.exit(1);
+	}
 };
 
 // Start the server

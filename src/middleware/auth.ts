@@ -10,126 +10,126 @@ import { eq } from 'drizzle-orm';
  * Middleware to authenticate JWT token
  */
 export const authenticate = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
+	req: AuthRequest,
+	res: Response,
+	next: NextFunction,
 ): Promise<void> => {
-  try {
-    // Get token from Authorization header
-    const authHeader = req.headers.authorization;
+	try {
+		// Get token from Authorization header
+		const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('No token provided');
-    }
+		if (!authHeader || !authHeader.startsWith('Bearer ')) {
+			throw new UnauthorizedError('No token provided');
+		}
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+		const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    // Verify token
-    const payload = verifyToken(token);
+		// Verify token
+		const payload = verifyToken(token);
 
-    if (payload.type !== 'access') {
-      throw new UnauthorizedError('Invalid token type');
-    }
+		if (payload.type !== 'access') {
+			throw new UnauthorizedError('Invalid token type');
+		}
 
-    // Get user from database
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        emailVerified: users.emailVerified,
-        displayName: users.displayName,
-        avatarUrl: users.avatarUrl,
-        status: users.status,
-      })
-      .from(users)
-      .where(eq(users.id, payload.userId))
-      .limit(1);
+		// Get user from database
+		const [user] = await db
+			.select({
+				id: users.id,
+				email: users.email,
+				emailVerified: users.emailVerified,
+				displayName: users.displayName,
+				avatarUrl: users.avatarUrl,
+				status: users.status,
+			})
+			.from(users)
+			.where(eq(users.id, payload.userId))
+			.limit(1);
 
-    if (!user) {
-      throw new UnauthorizedError('User not found');
-    }
+		if (!user) {
+			throw new UnauthorizedError('User not found');
+		}
 
-    if (user.status !== 'active') {
-      throw new UnauthorizedError('Account is not active');
-    }
+		if (user.status !== 'active') {
+			throw new UnauthorizedError('Account is not active');
+		}
 
-    // Attach user to request
-    (req as any).user = user;
+		// Attach user to request
+		(req as any).user = user;
 
-    next();
-  } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      next(error);
-    } else {
-      logger.error('Authentication error:', error);
-      next(new UnauthorizedError('Invalid token'));
-    }
-  }
+		next();
+	} catch (error) {
+		if (error instanceof UnauthorizedError) {
+			next(error);
+		} else {
+			logger.error('Authentication error:', error);
+			next(new UnauthorizedError('Invalid token'));
+		}
+	}
 };
 
 /**
  * Optional authentication - doesn't fail if no token
  */
 export const optionalAuth = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
+	req: AuthRequest,
+	res: Response,
+	next: NextFunction,
 ): Promise<void> => {
-  try {
-    const authHeader = req.headers.authorization;
+	try {
+		const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next();
-    }
+		if (!authHeader || !authHeader.startsWith('Bearer ')) {
+			return next();
+		}
 
-    const token = authHeader.substring(7);
-    const payload = verifyToken(token);
+		const token = authHeader.substring(7);
+		const payload = verifyToken(token);
 
-    if (payload.type !== 'access') {
-      return next();
-    }
+		if (payload.type !== 'access') {
+			return next();
+		}
 
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        emailVerified: users.emailVerified,
-        displayName: users.displayName,
-        avatarUrl: users.avatarUrl,
-        status: users.status,
-      })
-      .from(users)
-      .where(eq(users.id, payload.userId))
-      .limit(1);
+		const [user] = await db
+			.select({
+				id: users.id,
+				email: users.email,
+				emailVerified: users.emailVerified,
+				displayName: users.displayName,
+				avatarUrl: users.avatarUrl,
+				status: users.status,
+			})
+			.from(users)
+			.where(eq(users.id, payload.userId))
+			.limit(1);
 
-    if (user && user.status === 'active') {
-      (req as any).user = user;
-    }
+		if (user && user.status === 'active') {
+			(req as any).user = user;
+		}
 
-    next();
-  } catch (error) {
-    // Silently fail for optional auth
-    next();
-  }
+		next();
+	} catch (error) {
+		// Silently fail for optional auth
+		next();
+	}
 };
 
 /**
  * Middleware to check if email is verified
  */
 export const requireEmailVerified = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  if (!req.user) {
-    return next(new UnauthorizedError('Not authenticated'));
-  }
+	if (!req.user) {
+		return next(new UnauthorizedError('Not authenticated'));
+	}
 
-  if (!req.user.emailVerified) {
-    return next(new UnauthorizedError('Email not verified'));
-  }
+	if (!req.user.emailVerified) {
+		return next(new UnauthorizedError('Email not verified'));
+	}
 
-  next();
+	next();
 };
 
 export default {
-  authenticate,
-  optionalAuth,
-  requireEmailVerified,
+	authenticate,
+	optionalAuth,
+	requireEmailVerified,
 };
