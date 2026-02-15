@@ -1,0 +1,212 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: your_db_user
+          POSTGRES_PASSWORD: your_db_password
+          POSTGRES_DB: auth_system_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run linter
+        run: bun run lint
+
+      - name: Run type check
+        run: bun run type-check
+
+      - name: Run tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://your_db_user:your_db_password@your_db_host:5432/auth_system_test
+          JWT_SECRET: test-jwt-secret-key-for-ci-testing-purposes-only-min-32-chars
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: bun run test:ci
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build application
+        run: bun run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging-api.yourapp.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy to AWS Elastic Beanstalk
+        run: |
+          # Package application
+          zip -r deploy.zip dist/ package.json package-lock.json .ebextensions/
+          
+          # Upload to S3
+          aws s3 cp deploy.zip s3://${{ secrets.EB_BUCKET }}/auth-system-staging-${{ github.sha }}.zip
+          
+          # Create application version
+          aws elasticbeanstalk create-application-version \
+            --application-name auth-system \
+            --version-label staging-${{ github.sha }} \
+            --source-bundle S3Bucket=${{ secrets.EB_BUCKET }},S3Key=auth-system-staging-${{ github.sha }}.zip
+          
+          # Update environment
+          aws elasticbeanstalk update-environment \
+            --application-name auth-system \
+            --environment-name auth-system-staging \
+            --version-label staging-${{ github.sha }}
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://api.yourapp.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy to AWS Elastic Beanstalk
+        run: |
+          # Package application
+          zip -r deploy.zip dist/ package.json package-lock.json .ebextensions/
+          
+          # Upload to S3
+          aws s3 cp deploy.zip s3://${{ secrets.EB_BUCKET }}/auth-system-prod-${{ github.sha }}.zip
+          
+          # Create application version
+          aws elasticbeanstalk create-application-version \
+            --application-name auth-system \
+            --version-label prod-${{ github.sha }} \
+            --source-bundle S3Bucket=${{ secrets.EB_BUCKET }},S3Key=auth-system-prod-${{ github.sha }}.zip
+          
+          # Update environment
+          aws elasticbeanstalk update-environment \
+            --application-name auth-system \
+            --environment-name auth-system-production \
+            --version-label prod-${{ github.sha }}
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          body: |
+            Production deployment of auth-system
+            Commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
