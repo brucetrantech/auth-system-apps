@@ -77,6 +77,17 @@ router.patch(
 	authController.updateProfile,
 );
 
+// Get linked OAuth providers
+router.get('/me/providers', authenticate, authController.getLinkedProviders);
+
+// Unlink OAuth provider
+router.delete(
+	'/me/providers',
+	authenticate,
+	validate(authController.unlinkProviderValidation),
+	authController.unlinkProvider,
+);
+
 /**
  * OAuth Routes
  */

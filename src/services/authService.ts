@@ -18,7 +18,6 @@ import {
 	ValidationError,
 	UnauthorizedError,
 	ConflictError,
-	NotFoundError,
 	OAuthProfile,
 	DeviceInfo,
 	AuditEventType,
@@ -562,6 +561,74 @@ class AuthService {
 			expiresIn: tokens.expiresIn,
 			isNewUser,
 		};
+	}
+
+	/**
+	 * Get linked OAuth providers for a user
+	 */
+	async getLinkedProviders(userId: string) {
+		const providers = await db
+			.select({
+				id: oauthProviders.id,
+				provider: oauthProviders.provider,
+				providerEmail: oauthProviders.providerEmail,
+				createdAt: oauthProviders.createdAt,
+			})
+			.from(oauthProviders)
+			.where(eq(oauthProviders.userId, userId));
+
+		return providers;
+	}
+
+	/**
+	 * Unlink an OAuth provider from user account
+	 */
+	async unlinkProvider(
+		userId: string,
+		provider: 'google' | 'facebook' | 'apple',
+		deviceInfo?: { ip?: string; userAgent?: string },
+	): Promise<{ success: boolean; message: string }> {
+		// Get all linked providers for user
+		const providers = await this.getLinkedProviders(userId);
+
+		// Check if user has this provider linked
+		const providerToUnlink = providers.find((p) => p.provider === provider);
+		if (!providerToUnlink) {
+			return {
+				success: false,
+				message: `Provider ${provider} is not linked to your account`,
+			};
+		}
+
+		// Check if user has a password or at least one other provider
+		const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+		const hasPassword = !!user?.passwordHash;
+		const otherProviders = providers.filter((p) => p.provider !== provider);
+
+		if (!hasPassword && otherProviders.length === 0) {
+			return {
+				success: false,
+				message:
+					'Cannot unlink the only sign-in method. Add a password or link another provider first.',
+			};
+		}
+
+		// Delete the provider
+		await db.delete(oauthProviders).where(eq(oauthProviders.id, providerToUnlink.id));
+
+		// Log audit event
+		await this.logAuditEvent({
+			userId,
+			eventType: AuditEventType.OAUTH_UNLINK,
+			ipAddress: deviceInfo?.ip,
+			userAgent: deviceInfo?.userAgent,
+			metadata: { provider },
+			success: true,
+		});
+
+		logger.info(`OAuth provider unlinked by user: ${provider} for user ${userId}`);
+		return { success: true, message: `Successfully unlinked ${provider}` };
 	}
 
 	/**

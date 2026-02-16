@@ -247,6 +247,55 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
 	});
 });
 
+/**
+ * Get linked OAuth providers
+ */
+export const getLinkedProviders = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const userId = req.user!.id;
+	const providers = await authService.getLinkedProviders(userId);
+
+	res.json({
+		success: true,
+		data: { providers },
+	});
+});
+
+/**
+ * Unlink OAuth provider validation
+ */
+export const unlinkProviderValidation = [
+	body('provider')
+		.isIn(['google', 'facebook', 'apple'])
+		.withMessage('Provider must be google, facebook, or apple'),
+];
+
+/**
+ * Unlink OAuth provider
+ */
+export const unlinkProvider = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const userId = req.user!.id;
+	const { provider } = req.body;
+	const deviceInfo = getDeviceInfo(req);
+
+	const result = await authService.unlinkProvider(userId, provider, {
+		ip: deviceInfo.ip,
+		userAgent: deviceInfo.userAgent,
+	});
+
+	if (!result.success) {
+		res.status(400).json({
+			success: false,
+			message: result.message,
+		});
+		return;
+	}
+
+	res.json({
+		success: true,
+		message: result.message,
+	});
+});
+
 export default {
 	register,
 	registerValidation,
@@ -265,4 +314,7 @@ export default {
 	getCurrentUser,
 	updateProfile,
 	updateProfileValidation,
+	getLinkedProviders,
+	unlinkProvider,
+	unlinkProviderValidation,
 };

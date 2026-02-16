@@ -113,6 +113,31 @@ export const authApi = {
 		);
 		return response.data.data;
 	},
+
+	getLinkedProviders: async (): Promise<
+		{ id: string; provider: string; providerEmail: string; createdAt: string }[]
+	> => {
+		const response = await api.get<
+			ApiResponse<{
+				providers: {
+					id: string;
+					provider: string;
+					providerEmail: string;
+					createdAt: string;
+				}[];
+			}>
+		>('/auth/me/providers');
+		return response.data.data.providers;
+	},
+
+	unlinkProvider: async (
+		provider: 'google' | 'facebook' | 'apple',
+	): Promise<{ message: string }> => {
+		const response = await api.delete<ApiResponse<{ message: string }>>('/auth/me/providers', {
+			data: { provider },
+		});
+		return response.data.data;
+	},
 };
 
 export const getErrorMessage = (error: unknown): string => {
