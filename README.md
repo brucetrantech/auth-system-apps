@@ -195,7 +195,7 @@ http://localhost:3000/api/v1
 
 ## Firebase Authentication Setup
 
-The system supports Firebase Authentication for social sign-in (Google, Facebook). This provides a smoother popup-based experience on the frontend.
+The system supports Firebase Authentication for social sign-in (Google, Facebook, Apple). This provides a smoother popup-based experience on the frontend.
 
 ### Backend Configuration
 
@@ -225,9 +225,30 @@ VITE_FIREBASE_APP_ID=1:123456789:web:abc123
 
 Get these values from Firebase Console → Project Settings → General → Your Apps → Web App.
 
+### Apple Sign-In Setup
+
+To enable Sign in with Apple:
+
+1. **Apple Developer Account Setup:**
+    - Go to [Apple Developer](https://developer.apple.com/) → Certificates, Identifiers & Profiles
+    - Create an App ID with "Sign in with Apple" capability
+    - Create a Services ID for web authentication
+    - Create a Key for Sign in with Apple
+
+2. **Firebase Console Setup:**
+    - Go to **Authentication** → **Sign-in method**
+    - Enable **Apple** provider
+    - Enter your **Services ID** (from Apple Developer)
+    - Enter your **Apple Team ID**
+    - Upload your **Key ID** and **Private Key** (`.p8` file contents)
+
+3. **Configure OAuth Consent:**
+    - Add your domain to Apple's list of authorized domains
+    - Add `https://your-project.firebaseapp.com/__/auth/handler` as a redirect URL
+
 ### Enable Multiple Providers Per Email
 
-To allow users to sign in with multiple providers (Google AND Facebook) using the same email:
+To allow users to sign in with multiple providers (Google, Facebook, AND Apple) using the same email:
 
 1. Go to **Firebase Console** → **Authentication** → **Settings**
 2. Under **User account linking**, select **"Allow creation of multiple accounts with the same email address"**

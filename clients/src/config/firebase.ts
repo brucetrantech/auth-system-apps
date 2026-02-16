@@ -3,6 +3,7 @@ import {
 	getAuth,
 	GoogleAuthProvider,
 	FacebookAuthProvider,
+	OAuthProvider,
 	signInWithPopup,
 	signOut,
 	linkWithCredential,
@@ -35,6 +36,11 @@ const facebookProvider = new FacebookAuthProvider();
 facebookProvider.addScope('email');
 facebookProvider.addScope('public_profile');
 
+// Apple provider
+const appleProvider = new OAuthProvider('apple.com');
+appleProvider.addScope('email');
+appleProvider.addScope('name');
+
 /**
  * Sign in with Google using Firebase
  */
@@ -47,6 +53,13 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
  */
 export const signInWithFacebook = async (): Promise<UserCredential> => {
 	return signInWithPopup(auth, facebookProvider);
+};
+
+/**
+ * Sign in with Apple using Firebase
+ */
+export const signInWithApple = async (): Promise<UserCredential> => {
+	return signInWithPopup(auth, appleProvider);
 };
 
 /**
@@ -124,6 +137,6 @@ export const getCredentialFromError = (error: AuthError): OAuthCredential | null
 	return null;
 };
 
-export { auth, GoogleAuthProvider, FacebookAuthProvider };
+export { auth, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider };
 export type { OAuthCredential, AuthError };
 export default app;
