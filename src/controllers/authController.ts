@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Response } from 'express';
 import { body, query } from 'express-validator';
 import { authService } from '@/services/authService';
 import { AuthRequest, RegisterDto, LoginDto, DeviceInfo } from '@/types';
@@ -31,19 +31,17 @@ export const registerValidation = [
 /**
  * Register new user
  */
-export const register = asyncHandler(
-	async (req: AuthRequest, res: Response, next: NextFunction) => {
-		const data: RegisterDto = req.body;
-		const deviceInfo = getDeviceInfo(req);
+export const register = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const data: RegisterDto = req.body;
+	const deviceInfo = getDeviceInfo(req);
 
-		const result = await authService.register(data, deviceInfo);
+	const result = await authService.register(data, deviceInfo);
 
-		res.status(201).json({
-			success: true,
-			data: result,
-		});
-	},
-);
+	res.status(201).json({
+		success: true,
+		data: result,
+	});
+});
 
 /**
  * Login validation rules
@@ -56,7 +54,7 @@ export const loginValidation = [
 /**
  * Login with email and password
  */
-export const login = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const login = asyncHandler(async (req: AuthRequest, res: Response) => {
 	const data: LoginDto = req.body;
 	const deviceInfo = getDeviceInfo(req);
 
@@ -78,19 +76,17 @@ export const refreshValidation = [
 /**
  * Refresh access token
  */
-export const refreshToken = asyncHandler(
-	async (req: AuthRequest, res: Response, next: NextFunction) => {
-		const { refreshToken } = req.body;
-		const deviceInfo = getDeviceInfo(req);
+export const refreshToken = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const { refreshToken } = req.body;
+	const deviceInfo = getDeviceInfo(req);
 
-		const result = await authService.refreshAccessToken(refreshToken, deviceInfo);
+	const result = await authService.refreshAccessToken(refreshToken, deviceInfo);
 
-		res.json({
-			success: true,
-			data: result,
-		});
-	},
-);
+	res.json({
+		success: true,
+		data: result,
+	});
+});
 
 /**
  * Logout validation rules
@@ -102,7 +98,7 @@ export const logoutValidation = [
 /**
  * Logout user
  */
-export const logout = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
 	const { refreshToken } = req.body;
 	const userId = req.user!.id;
 	const deviceInfo = getDeviceInfo(req);
@@ -125,18 +121,16 @@ export const verifyEmailValidation = [
 /**
  * Verify email address
  */
-export const verifyEmail = asyncHandler(
-	async (req: AuthRequest, res: Response, next: NextFunction) => {
-		const { token } = req.query;
+export const verifyEmail = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const { token } = req.query;
 
-		const result = await authService.verifyEmail(token as string);
+	const result = await authService.verifyEmail(token as string);
 
-		res.json({
-			success: true,
-			data: result,
-		});
-	},
-);
+	res.json({
+		success: true,
+		data: result,
+	});
+});
 
 /**
  * Forgot password validation rules
@@ -148,19 +142,17 @@ export const forgotPasswordValidation = [
 /**
  * Request password reset
  */
-export const forgotPassword = asyncHandler(
-	async (req: AuthRequest, res: Response, next: NextFunction) => {
-		const { email } = req.body;
-		const deviceInfo = getDeviceInfo(req);
+export const forgotPassword = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const { email } = req.body;
+	const deviceInfo = getDeviceInfo(req);
 
-		const result = await authService.requestPasswordReset(email, deviceInfo);
+	const result = await authService.requestPasswordReset(email, deviceInfo);
 
-		res.json({
-			success: true,
-			data: result,
-		});
-	},
-);
+	res.json({
+		success: true,
+		data: result,
+	});
+});
 
 /**
  * Reset password validation rules
@@ -175,49 +167,45 @@ export const resetPasswordValidation = [
 /**
  * Reset password
  */
-export const resetPassword = asyncHandler(
-	async (req: AuthRequest, res: Response, next: NextFunction) => {
-		const { token, newPassword } = req.body;
-		const deviceInfo = getDeviceInfo(req);
+export const resetPassword = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const { token, newPassword } = req.body;
+	const deviceInfo = getDeviceInfo(req);
 
-		const result = await authService.resetPassword(token, newPassword, deviceInfo);
+	const result = await authService.resetPassword(token, newPassword, deviceInfo);
 
-		res.json({
-			success: true,
-			data: result,
-		});
-	},
-);
+	res.json({
+		success: true,
+		data: result,
+	});
+});
 
 /**
  * Get current user profile
  */
-export const getCurrentUser = asyncHandler(
-	async (req: AuthRequest, res: Response, next: NextFunction) => {
-		const userId = req.user!.id;
+export const getCurrentUser = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const userId = req.user!.id;
 
-		const [user] = await db
-			.select({
-				id: users.id,
-				email: users.email,
-				emailVerified: users.emailVerified,
-				displayName: users.displayName,
-				avatarUrl: users.avatarUrl,
-				phoneNumber: users.phoneNumber,
-				status: users.status,
-				createdAt: users.createdAt,
-				lastLoginAt: users.lastLoginAt,
-			})
-			.from(users)
-			.where(eq(users.id, userId))
-			.limit(1);
+	const [user] = await db
+		.select({
+			id: users.id,
+			email: users.email,
+			emailVerified: users.emailVerified,
+			displayName: users.displayName,
+			avatarUrl: users.avatarUrl,
+			phoneNumber: users.phoneNumber,
+			status: users.status,
+			createdAt: users.createdAt,
+			lastLoginAt: users.lastLoginAt,
+		})
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
 
-		res.json({
-			success: true,
-			data: { user },
-		});
-	},
-);
+	res.json({
+		success: true,
+		data: { user },
+	});
+});
 
 /**
  * Update profile validation rules
@@ -231,35 +219,33 @@ export const updateProfileValidation = [
 /**
  * Update user profile
  */
-export const updateProfile = asyncHandler(
-	async (req: AuthRequest, res: Response, next: NextFunction) => {
-		const userId = req.user!.id;
-		const { displayName, phoneNumber, avatarUrl } = req.body;
+export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
+	const userId = req.user!.id;
+	const { displayName, phoneNumber, avatarUrl } = req.body;
 
-		const updateData: any = {};
-		if (displayName !== undefined) updateData.displayName = displayName;
-		if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-		if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+	const updateData: any = {};
+	if (displayName !== undefined) updateData.displayName = displayName;
+	if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+	if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
 
-		const [updatedUser] = await db
-			.update(users)
-			.set(updateData)
-			.where(eq(users.id, userId))
-			.returning({
-				id: users.id,
-				email: users.email,
-				displayName: users.displayName,
-				avatarUrl: users.avatarUrl,
-				phoneNumber: users.phoneNumber,
-			});
-
-		res.json({
-			success: true,
-			data: { user: updatedUser },
-			message: 'Profile updated successfully',
+	const [updatedUser] = await db
+		.update(users)
+		.set(updateData)
+		.where(eq(users.id, userId))
+		.returning({
+			id: users.id,
+			email: users.email,
+			displayName: users.displayName,
+			avatarUrl: users.avatarUrl,
+			phoneNumber: users.phoneNumber,
 		});
-	},
-);
+
+	res.json({
+		success: true,
+		data: { user: updatedUser },
+		message: 'Profile updated successfully',
+	});
+});
 
 export default {
 	register,

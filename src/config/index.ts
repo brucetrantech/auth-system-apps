@@ -68,6 +68,12 @@ interface Config {
 		oauthGoogle: boolean;
 		oauthFacebook: boolean;
 		oauthApple: boolean;
+		firebaseAuth: boolean;
+	};
+	firebase: {
+		projectId: string;
+		clientEmail: string;
+		privateKey: string;
 	};
 	security: {
 		bcryptRounds: number;
@@ -171,6 +177,13 @@ export const config: Config = {
 		oauthGoogle: process.env.FEATURE_OAUTH_GOOGLE === 'true',
 		oauthFacebook: process.env.FEATURE_OAUTH_FACEBOOK === 'true',
 		oauthApple: process.env.FEATURE_OAUTH_APPLE === 'true',
+		firebaseAuth: process.env.FEATURE_FIREBASE_AUTH === 'true',
+	},
+
+	firebase: {
+		projectId: process.env.FIREBASE_PROJECT_ID || '',
+		clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
+		privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
 	},
 
 	security: {

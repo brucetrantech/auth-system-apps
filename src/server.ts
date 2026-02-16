@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import passport from '@/config/passport';
+import { initializeFirebase } from '@/config/firebase';
 import { config, validateConfig } from '@/config';
 import { logger, morganStream } from '@/utils/logger';
 import { testConnection } from '@/db';
@@ -90,6 +91,11 @@ const startServer = async (): Promise<void> => {
 			throw new Error('Failed to connect to database');
 		}
 
+		// Initialize Firebase
+		if (config.features.firebaseAuth) {
+			initializeFirebase();
+		}
+
 		// Start listening
 		const server = app.listen(config.port, () => {
 			logger.info(`
@@ -113,6 +119,7 @@ const startServer = async (): Promise<void> => {
 			logger.info(`  - Google OAuth:    ${config.features.oauthGoogle}`);
 			logger.info(`  - Facebook OAuth:  ${config.features.oauthFacebook}`);
 			logger.info(`  - Apple OAuth:     ${config.features.oauthApple}`);
+			logger.info(`  - Firebase Auth:   ${config.features.firebaseAuth}`);
 
 			// Print all registered routes
 			printRoutes(app);

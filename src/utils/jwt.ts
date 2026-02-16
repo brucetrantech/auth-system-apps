@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import { config } from '@/config';
 import { logger } from './logger';
 import { UnauthorizedError } from '@/types';
@@ -25,11 +25,13 @@ export const generateAccessToken = (userId: string, email: string): string => {
 		type: 'access',
 	};
 
-	return jwt.sign(payload, config.jwt.secret, {
-		expiresIn: config.jwt.accessTokenExpiry,
+	const options: SignOptions = {
+		expiresIn: config.jwt.accessTokenExpiry as jwt.SignOptions['expiresIn'],
 		issuer: 'auth-system',
 		audience: 'auth-system-api',
-	});
+	};
+
+	return jwt.sign(payload, config.jwt.secret, options);
 };
 
 /**
@@ -42,11 +44,13 @@ export const generateRefreshToken = (userId: string, email: string): string => {
 		type: 'refresh',
 	};
 
-	return jwt.sign(payload, config.jwt.secret, {
-		expiresIn: config.jwt.refreshTokenExpiry,
+	const options: SignOptions = {
+		expiresIn: config.jwt.refreshTokenExpiry as jwt.SignOptions['expiresIn'],
 		issuer: 'auth-system',
 		audience: 'auth-system-api',
-	});
+	};
+
+	return jwt.sign(payload, config.jwt.secret, options);
 };
 
 /**

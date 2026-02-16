@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as authController from '@/controllers/authController';
 import * as oauthController from '@/controllers/oauthController';
+import * as firebaseController from '@/controllers/firebaseController';
 import { authenticate } from '@/middleware/auth';
 import { validate } from '@/middleware/validation';
 import {
@@ -87,9 +88,20 @@ router.get('/oauth/google/callback', ...oauthController.googleCallback);
 // Facebook OAuth
 router.get('/oauth/facebook', oauthController.facebookAuth);
 router.get('/oauth/facebook/callback', ...oauthController.facebookCallback);
+router.post('/oauth/facebook/deauthorize', oauthController.facebookDeauthorize);
 
 // Apple OAuth
 router.get('/oauth/apple', oauthController.appleAuth);
 router.post('/oauth/apple/callback', ...oauthController.appleCallback);
+
+/**
+ * Firebase Authentication
+ */
+router.post(
+	'/firebase',
+	authLimiter,
+	validate(firebaseController.firebaseAuthValidation),
+	firebaseController.firebaseAuth,
+);
 
 export default router;

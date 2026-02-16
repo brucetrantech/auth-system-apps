@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import passport from '@/config/passport';
 import { authService } from '@/services/authService';
 import { OAuthProfile, DeviceInfo } from '@/types';
@@ -21,9 +21,13 @@ const getDeviceInfo = (req: Request): DeviceInfo => ({
 const handleOAuthCallback = async (
 	req: Request,
 	res: Response,
-	profile: OAuthProfile,
+	profile?: OAuthProfile,
 ): Promise<void> => {
 	try {
+		if (!profile) {
+			logger.warn('OAuth callback: Missing profile');
+			throw new Error('Authentication failed');
+		}
 		const deviceInfo = getDeviceInfo(req);
 		const result = await authService.handleOAuthCallback(profile, deviceInfo);
 
@@ -64,8 +68,8 @@ export const googleCallback = [
 		session: false,
 		failureRedirect: `${config.urls.frontend}/auth/error?error=google_auth_failed`,
 	}),
-	async (req: Request, res: Response, next: NextFunction) => {
-		const profile = req.user as OAuthProfile;
+	async (req: Request, res: Response) => {
+		const profile = req.oauthUser;
 		await handleOAuthCallback(req, res, profile);
 	},
 ];
@@ -86,8 +90,8 @@ export const facebookCallback = [
 		session: false,
 		failureRedirect: `${config.urls.frontend}/auth/error?error=facebook_auth_failed`,
 	}),
-	async (req: Request, res: Response, next: NextFunction) => {
-		const profile = req.user as OAuthProfile;
+	async (req: Request, res: Response) => {
+		const profile = req.oauthUser;
 		await handleOAuthCallback(req, res, profile);
 	},
 ];
@@ -108,17 +112,86 @@ export const appleCallback = [
 		session: false,
 		failureRedirect: `${config.urls.frontend}/auth/error?error=apple_auth_failed`,
 	}),
-	async (req: Request, res: Response, next: NextFunction) => {
-		const profile = req.user as OAuthProfile;
+	async (req: Request, res: Response) => {
+		const profile = req.oauthUser;
 		await handleOAuthCallback(req, res, profile);
 	},
 ];
+
+/**
+ * Facebook OAuth - Deauthorize callback
+ * Called by Facebook when a user removes the app from their account
+ */
+export const facebookDeauthorize = async (req: Request, res: Response) => {
+	try {
+		const signedRequest = req.body.signed_request;
+
+		if (!signedRequest) {
+			logger.warn('Facebook deauthorize: Missing signed_request');
+			return res.status(400).json({ success: false, message: 'Missing signed_request' });
+		}
+
+		// Parse and verify the signed request
+		const [encodedSig, payload] = signedRequest.split('.');
+
+		if (!encodedSig || !payload) {
+			logger.warn('Facebook deauthorize: Invalid signed_request format');
+			return res.status(400).json({ success: false, message: 'Invalid signed_request' });
+		}
+
+		// Decode the payload
+		const data = JSON.parse(
+			Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'),
+		);
+
+		// Verify signature using HMAC-SHA256
+		const crypto = await import('crypto');
+		const expectedSig = crypto
+			.createHmac('sha256', config.oauth.facebook.appSecret)
+			.update(payload)
+			.digest('base64')
+			.replace(/\+/g, '-')
+			.replace(/\//g, '_')
+			.replace(/=+$/, '');
+
+		if (encodedSig !== expectedSig) {
+			logger.warn('Facebook deauthorize: Invalid signature');
+			return res.status(403).json({ success: false, message: 'Invalid signature' });
+		}
+
+		const facebookUserId = data.user_id;
+
+		if (!facebookUserId) {
+			logger.warn('Facebook deauthorize: Missing user_id in payload');
+			return res.status(400).json({ success: false, message: 'Missing user_id' });
+		}
+
+		logger.info(`Facebook deauthorize request for user: ${facebookUserId}`);
+
+		// Remove the OAuth provider link
+		await authService.removeOAuthProvider('facebook', facebookUserId, {
+			ip: req.ip || req.socket.remoteAddress,
+			userAgent: req.headers['user-agent'],
+		});
+
+		// Facebook expects a JSON response with a confirmation URL (optional)
+		return res.status(200).json({
+			success: true,
+			url: `${config.urls.frontend}/account/deauthorized`,
+			confirmation_code: facebookUserId,
+		});
+	} catch (error) {
+		logger.error('Facebook deauthorize error:', error);
+		return res.status(500).json({ success: false, message: 'Internal server error' });
+	}
+};
 
 export default {
 	googleAuth,
 	googleCallback,
 	facebookAuth,
 	facebookCallback,
+	facebookDeauthorize,
 	appleAuth,
 	appleCallback,
 };

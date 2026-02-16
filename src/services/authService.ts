@@ -565,6 +565,52 @@ class AuthService {
 	}
 
 	/**
+	 * Remove OAuth provider link (for deauthorization callbacks)
+	 */
+	async removeOAuthProvider(
+		provider: 'google' | 'facebook' | 'apple',
+		providerUserId: string,
+		deviceInfo?: { ip?: string; userAgent?: string },
+	): Promise<boolean> {
+		try {
+			// Find the OAuth provider record
+			const [existingProvider] = await db
+				.select()
+				.from(oauthProviders)
+				.where(
+					and(
+						eq(oauthProviders.provider, provider),
+						eq(oauthProviders.providerUserId, providerUserId),
+					),
+				);
+
+			if (!existingProvider) {
+				logger.warn(`OAuth provider not found: ${provider}:${providerUserId}`);
+				return false;
+			}
+
+			// Delete the OAuth provider record
+			await db.delete(oauthProviders).where(eq(oauthProviders.id, existingProvider.id));
+
+			// Log the deauthorization
+			await this.logAuditEvent({
+				userId: existingProvider.userId,
+				eventType: AuditEventType.OAUTH_UNLINK,
+				ipAddress: deviceInfo?.ip,
+				userAgent: deviceInfo?.userAgent,
+				metadata: { provider, providerUserId },
+				success: true,
+			});
+
+			logger.info(`OAuth provider unlinked: ${provider}:${providerUserId}`);
+			return true;
+		} catch (error) {
+			logger.error('Failed to remove OAuth provider:', error);
+			return false;
+		}
+	}
+
+	/**
 	 * Log audit event
 	 */
 	private async logAuditEvent(data: {

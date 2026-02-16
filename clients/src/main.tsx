@@ -4,7 +4,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import App from '@/App';
 import { AuthProvider } from '@/context/AuthContext';
+import { APP_NAME } from '@/config/constants';
 import '@/styles/index.css';
+
+// Set document title from env
+document.title = APP_NAME;
 
 const queryClient = new QueryClient({
 	defaultOptions: {

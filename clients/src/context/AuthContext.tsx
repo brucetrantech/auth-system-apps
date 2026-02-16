@@ -15,6 +15,7 @@ interface AuthContextType {
 	register: (data: RegisterRequest) => Promise<void>;
 	logout: () => Promise<void>;
 	setAuthFromCallback: (accessToken: string, refreshToken: string) => void;
+	refetchUser: () => Promise<void>;
 	error: string | null;
 	clearError: () => void;
 }
@@ -127,6 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		setError(null);
 	}, []);
 
+	const handleRefetchUser = useCallback(async () => {
+		await refetchUser();
+	}, [refetchUser]);
+
 	const value: AuthContextType = {
 		user: user ?? null,
 		isAuthenticated: !!user,
@@ -139,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		register,
 		logout,
 		setAuthFromCallback,
+		refetchUser: handleRefetchUser,
 		error,
 		clearError,
 	};

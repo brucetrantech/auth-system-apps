@@ -1,7 +1,6 @@
 import axios from 'axios';
 import type { AuthResponse, RegisterRequest, LoginRequest, User, ApiError } from '@/types';
-
-const API_BASE_URL = '/api/v1';
+import { API_BASE_URL } from '@/config/constants';
 
 // Backend wraps responses in { success, data }
 interface ApiResponse<T> {
@@ -84,6 +83,11 @@ export const authApi = {
 
 	login: async (data: LoginRequest): Promise<AuthResponse> => {
 		const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', data);
+		return response.data.data;
+	},
+
+	firebaseAuth: async (idToken: string): Promise<AuthResponse> => {
+		const response = await api.post<ApiResponse<AuthResponse>>('/auth/firebase', { idToken });
 		return response.data.data;
 	},
 

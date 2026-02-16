@@ -68,3 +68,6 @@ drizzle.config.ts
 
 # Postman
 postman_collection.json
+
+# Firebase
+*-firebase-adminsdk-*.json
